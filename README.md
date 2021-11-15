@@ -1,0 +1,2 @@
+# sovellusohjelmointi2
+Sovellusohjelmointi-kurssin kakkosprojekti
