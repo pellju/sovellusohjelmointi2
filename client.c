@@ -54,9 +54,10 @@ int main (int argc, char *argv[]) {
         printf("ok\n");
     }
 
-    int fifofd = open("fifofile", O_WRONLY);
-    write(fifofd, &data, sizeof(data));
+    int fifofd = open("fifofile1", O_WRONLY);
+    write(fifofd, &data, sizeof(data) * strlen(data));
     close(fifofd);
+    
     /*
         <insert the piped connection here>
     */
