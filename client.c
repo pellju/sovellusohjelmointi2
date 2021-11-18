@@ -8,6 +8,8 @@
 #include <errno.h>
 #include <sys/types.h>
 
+#define MAX_DATA 512
+
 int main (int argc, char *argv[]) {
     
     if (argc < 2) { //Checking that if there's less arguments than required
@@ -24,40 +26,22 @@ int main (int argc, char *argv[]) {
         return -1;
     }
 
-    char data[1000];
-    read(fd, &data, 1000);
+    char data[MAX_DATA];
+    read(fd, &data, MAX_DATA);
     data[strlen(data)-1] = '\0';
 
     printf("Data from the file given: %s\n", data);
 
-    if (mkfifo("fifofile", 0777) == -1) {
-        if (errno == EACCES) {
-            printf("No permission.\n");
-        } else if (errno == EDQUOT) {
-            printf("EDQUOT\n");
-        } else if (errno == EEXIST) {
-            printf("Already exists.\n");
-        } else if (errno == ENAMETOOLONG) {
-            printf("PATHNAME too long.\n");
-        } else if (errno == ENOENT) {
-            printf("ENOENT.\n");
-        } else if (errno == ENOSPC) {
-            printf("ENOSPC\n");
-        } else if (errno == ENOTDIR) {
-            printf("ENOTDIR");
-        } else if (errno == EROFS) {
-            printf("Read-only fileysystem.\n");
-        }
-        perror("Could not create the file");
-        return -1;
-    } else {
-        printf("ok\n");
+    char *fifofile = "/tmp/fifofile";
+    mkfifo(fifofile, 0666);
+    while (1) {
+        sleep(2);
+        printf("data: %s\n", data);
+        int fifofd = open(fifofile, O_WRONLY);
+        write(fifofd, &data, MAX_DATA);
+        close(fifofd);
+        break;
     }
-
-    int fifofd = open("fifofile1", O_WRONLY);
-    write(fifofd, &data, sizeof(data) * strlen(data));
-    close(fifofd);
-    
     /*
         <insert the piped connection here>
     */
