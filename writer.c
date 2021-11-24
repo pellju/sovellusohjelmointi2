@@ -6,36 +6,43 @@
 
 #include <sys/stat.h>
 
-#define MAX_DATA 8
+#define MAX_DATA 512
 
-int writeData () {
-    char receivedData[MAX_DATA];
-    char *fifofile = "/tmp/fifofile";
-    mkfifo(fifofile, 0666);
-    int fd = open(fifofile, O_RDONLY);
+int writeToFile (char *pidInfo) { //Pid tulee onnistuneesti
+    char path[12];
+    sprintf(path, "/tmp/%s", pidInfo);
+    path[strlen(path)] = '\0';
+    char *fifopath = (char *)malloc(strlen(path)+1);
+    strcpy(fifopath, path);
+    mkfifo(fifopath, 0666);
+    int fifoFD;
+    char data[MAX_DATA];
 
-    read(fd, receivedData, MAX_DATA);
-    receivedData[strlen(receivedData)-1] = '\0';
-    printf("receivedData: %s\n", receivedData);
-    close(fd);
+    while(1) {
+        fifoFD = open(fifopath, O_RDONLY);
+        read(fifoFD, data, MAX_DATA);
+        printf("data: %s\n", data);
+        break;
+    }
 
-    char newFileName[10];
-    sprintf(newFileName, "%d", getpid());
-    printf("newFileName: %s\n", newFileName);
-    int wfd = open(newFileName, O_CREAT | O_WRONLY, 0664);
-    write(wfd, receivedData, MAX_DATA);
-    close(wfd);
-    
+    free(fifopath);
     return 0;
 }
 
 int main () {
 
+    char pidInfo[7];
+    char *fifofile = "/tmp/metadatafifo";
+    mkfifo(fifofile, 0666);
+    int pipefd;
 
     while (1) {
         sleep(2);
-        writeData();
-        break;
+        pipefd = open(fifofile, O_RDONLY);
+        read(pipefd, pidInfo, 7);
+        printf("pidINfo: %s\n", pidInfo);
+        writeToFile(pidInfo);
+        //break;
     }
     return 0;
 }

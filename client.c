@@ -10,6 +10,28 @@
 
 #define MAX_DATA 512
 
+int transferData (char *pidInfo, char *data){
+
+    printf("data: %s\n", data);
+    char path[13];
+    sprintf(path, "/tmp/%s", pidInfo);
+    path[12] = '\0';
+    char *fifopath = (char *)malloc(strlen(path)+1);
+    strcpy(fifopath, path);
+    mkfifo(fifopath, 0666);
+    printf("strlen(data): %ld\n", strlen(data));
+    int transferFD;
+    while(1) {
+        sleep(5);
+        transferFD = open(fifopath, O_WRONLY);
+        write(transferFD, &data, strlen(data));
+        break;
+    }
+
+    free(fifopath);
+    return 0;
+}
+
 int main (int argc, char *argv[]) {
     
     if (argc < 2) { //Checking that if there's less arguments than required
@@ -26,26 +48,26 @@ int main (int argc, char *argv[]) {
         return -1;
     }
 
+    char pidInfo[7];
+    sprintf(pidInfo, "%d", getpid());
+    pidInfo[strlen(pidInfo)] = '\0';
+    printf("pidInfo: %s\n", pidInfo);
+
     char data[MAX_DATA];
     read(fd, &data, MAX_DATA);
     data[strlen(data)-1] = '\0';
 
-    printf("Data from the file given: %s\n", data);
-
-    char *fifofile = "/tmp/fifofile";
+    char *fifofile = "/tmp/metadatafifo";
     mkfifo(fifofile, 0666);
     while (1) {
-        sleep(2);
-        printf("data: %s\n", data);
         int fifofd = open(fifofile, O_WRONLY);
-        write(fifofd, &data, MAX_DATA);
+        write(fifofd, &pidInfo, 7);
         close(fifofd);
+
+        printf("data: %s\n", data);
+        transferData(pidInfo, data);
+
         break;
     }
-    /*
-        <insert the piped connection here>
-    */
-
-    close(fd);
     return 0;
 }
