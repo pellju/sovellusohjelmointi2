@@ -8,7 +8,20 @@
 
 #define MAX_DATA 512
 
-int writeToFile (char *pidInfo) { //Pid tulee onnistuneesti
+int writeToFile (char *pidInfo, char *data) {
+
+    int fd = open(pidInfo, O_CREAT | O_WRONLY);
+    if (fd < 0) {
+        perror("There was an error creating the file");
+        return -1;
+    }
+
+    write(fd, &data, strlen(data));
+
+    return 0;
+}
+
+int recieveMessage (char *pidInfo) { //Pid tulee onnistuneesti
     char path[12];
     sprintf(path, "/tmp/%s", pidInfo);
     path[strlen(path)] = '\0';
@@ -20,8 +33,9 @@ int writeToFile (char *pidInfo) { //Pid tulee onnistuneesti
 
     while(1) {
         fifoFD = open(fifopath, O_RDONLY);
-        read(fifoFD, data, MAX_DATA);
-        printf("data: %s\n", data);
+        read(fifoFD, data, sizeof(data));
+        printf("data: %s, datalen: %ld\n", data, strlen(data));
+        writeToFile(pidInfo, data);
         break;
     }
 
@@ -41,7 +55,7 @@ int main () {
         pipefd = open(fifofile, O_RDONLY);
         read(pipefd, pidInfo, 7);
         printf("pidINfo: %s\n", pidInfo);
-        writeToFile(pidInfo);
+        recieveMessage(pidInfo);
         //break;
     }
     return 0;

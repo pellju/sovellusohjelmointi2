@@ -16,15 +16,25 @@ int transferData (char *pidInfo, char *data){
     char path[13];
     sprintf(path, "/tmp/%s", pidInfo);
     path[12] = '\0';
+    
     char *fifopath = (char *)malloc(strlen(path)+1);
     strcpy(fifopath, path);
     mkfifo(fifopath, 0666);
-    printf("strlen(data): %ld\n", strlen(data));
+    
+    char data1[strlen(data)-1];
+    int a = 0;
+    while (data[a] != '\0'){
+        data1[a] = data[a];
+        a++;
+    }
+
+    printf("strlen(data1): %ld, data1: %s\n", strlen(data1), data1);
+
     int transferFD;
     while(1) {
         sleep(5);
         transferFD = open(fifopath, O_WRONLY);
-        write(transferFD, &data, strlen(data));
+        write(transferFD, &data1, strlen(data1)+1);
         break;
     }
 
@@ -55,7 +65,7 @@ int main (int argc, char *argv[]) {
 
     char data[MAX_DATA];
     read(fd, &data, MAX_DATA);
-    data[strlen(data)-1] = '\0';
+    data[strlen(data)] = '\0';
 
     char *fifofile = "/tmp/metadatafifo";
     mkfifo(fifofile, 0666);
