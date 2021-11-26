@@ -1,3 +1,9 @@
+/*
+*   TODO:
+*   - threading
+*   - logging
+*   - cleaning the code
+*/
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -52,13 +58,12 @@ int main () {
     int pipefd;
 
     while (1) {
-        sleep(2);
         pipefd = open(fifofile, O_RDONLY);
         read(pipefd, pidInfo, 7);
         printf("pidINfo: %s\n", pidInfo);
         recieveMessage(pidInfo);
+        sleep(1);
         //break;
     }
-    unlink(fifofile);
     return 0;
 }

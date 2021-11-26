@@ -1,3 +1,8 @@
+/*
+*   TODO:
+*   - clean the code
+*   - figure out why the fifo-transmission requires while-loops
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -7,6 +12,8 @@
 
 #include <errno.h>
 #include <sys/types.h>
+
+#include "logging.c"
 
 #define MAX_DATA 512
 
@@ -36,7 +43,6 @@ int transferData (char *pidInfo, char *data, long int datasize){
         write(transferFD, &data1, strlen(data1)+1);
         break;
     }
-
     free(fifopath);
     unlink(fifopath);
     return 0;
@@ -55,12 +61,24 @@ int main (int argc, char *argv[]) {
     int fd = open(argv[1], O_RDONLY);
     if (fd < 0) { //Opening the file given
         printf("There was problem opening the given file %s. Please check the given name.\n", argv[1]);
+        
+        if (endingLog(0) < 0){
+            printf("Error while trying to write ending log.\n");
+        }
+        
         return -1;
+    } else {
+        char fileOpened[25+strlen(argv[1])];
+        sprintf(fileOpened, "File %s succesfully opened.", argv[1]);
+        if (writeLog(fileOpened, 0) < 0) {
+            printf("There was an error while writing log. However, continuing the operation.\n");
+        }
     }
-
+    
     char pidInfo[7];
     sprintf(pidInfo, "%d", getpid());
     pidInfo[strlen(pidInfo)] = '\0';
+    printf("pidInfo: %s\n", pidInfo);
 
     char data[MAX_DATA];
     read(fd, &data, MAX_DATA);
@@ -74,9 +92,12 @@ int main (int argc, char *argv[]) {
         close(fifofd);
 
         transferData(pidInfo, data, strlen(data));
-
         break;
     }
-    unlink(fifofile);
+
+    if (endingLog(0) < 0) {
+        printf("Some kind of an error occured.\n");
+    }
+
     return 0;
 }
