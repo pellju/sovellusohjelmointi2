@@ -10,9 +10,8 @@
 
 #define MAX_DATA 512
 
-int transferData (char *pidInfo, char *data){
+int transferData (char *pidInfo, char *data, long int datasize){
 
-    printf("data: %s\n", data);
     char path[13];
     sprintf(path, "/tmp/%s", pidInfo);
     path[12] = '\0';
@@ -21,9 +20,9 @@ int transferData (char *pidInfo, char *data){
     strcpy(fifopath, path);
     mkfifo(fifopath, 0666);
     
-    char data1[strlen(data)-1];
+    char data1[datasize];
     int a = 0;
-    while (data[a] != '\0'){
+    while (a <= datasize){
         data1[a] = data[a];
         a++;
     }
@@ -39,6 +38,7 @@ int transferData (char *pidInfo, char *data){
     }
 
     free(fifopath);
+    unlink(fifopath);
     return 0;
 }
 
@@ -61,23 +61,22 @@ int main (int argc, char *argv[]) {
     char pidInfo[7];
     sprintf(pidInfo, "%d", getpid());
     pidInfo[strlen(pidInfo)] = '\0';
-    printf("pidInfo: %s\n", pidInfo);
 
     char data[MAX_DATA];
     read(fd, &data, MAX_DATA);
-    data[strlen(data)] = '\0';
+    printf("datalength: %ld, data: %s\n", strlen(data), data);
 
     char *fifofile = "/tmp/metadatafifo";
     mkfifo(fifofile, 0666);
-    while (1) {
+    while (1) { //For some reason program does not work if the while-loop is not activated...
         int fifofd = open(fifofile, O_WRONLY);
         write(fifofd, &pidInfo, 7);
         close(fifofd);
 
-        printf("data: %s\n", data);
-        transferData(pidInfo, data);
+        transferData(pidInfo, data, strlen(data));
 
         break;
     }
+    unlink(fifofile);
     return 0;
 }

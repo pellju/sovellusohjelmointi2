@@ -15,8 +15,8 @@ int writeToFile (char *pidInfo, char *data) {
         perror("There was an error creating the file");
         return -1;
     }
-
-    write(fd, &data, strlen(data));
+    write(fd, data, strlen(data));
+    close(fd);
 
     return 0;
 }
@@ -40,6 +40,7 @@ int recieveMessage (char *pidInfo) { //Pid tulee onnistuneesti
     }
 
     free(fifopath);
+    unlink(fifopath);
     return 0;
 }
 
@@ -58,5 +59,6 @@ int main () {
         recieveMessage(pidInfo);
         //break;
     }
+    unlink(fifofile);
     return 0;
 }
