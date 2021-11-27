@@ -9,27 +9,49 @@
 #include <stdlib.h>
 #include <fcntl.h> //O_RDONLY
 #include <unistd.h>
-
+#include <pthread.h>
 #include <sys/stat.h>
 
 #define MAX_DATA 512
 
+struct fileWritingParams {
+    char* pidInfo;
+    char* data;
+};
+
 int writeToFile (char *pidInfo, char *data) {
+//void *writeToFile (void *params) {
+
+    //struct fileWritingParams *givenParams = params; 
+    //char *pidInfo = givenParams->pidInfo;
+    //char *data = givenParams->data;
+
+    printf("pidInfo: %s, data: %s\n", pidInfo, data);
+
+    /*if (access(pidInfo, F_OK) != -1) {
+        printf("fak.\n");
+    } else {
+        printf("non-fak.\n");
+    }*/
 
     int fd = open(pidInfo, O_CREAT | O_WRONLY);
-    if (fd < 0) {
+    printf("fd: %d\n", fd);
+    if (fd < 0 || fd == 65) {
         perror("There was an error creating the file");
-        return -1;
+        //pthread_cancel(params);
+        //pthread_exit(params);
     }
     write(fd, data, strlen(data));
     close(fd);
-
     return 0;
+    //pthread_exit(params);
 }
 
-int recieveMessage (char *pidInfo) { //Pid tulee onnistuneesti
+//int recieveMessage (char *pidInfo) { //Pid tulee onnistuneesti
+void *recieveMessage (void *pidInfo) {
     char path[12];
-    sprintf(path, "/tmp/%s", pidInfo);
+    char pid[7];
+    sprintf(path, "/tmp/%s", (char *)pidInfo);
     path[strlen(path)] = '\0';
     char *fifopath = (char *)malloc(strlen(path)+1);
     strcpy(fifopath, path);
@@ -37,17 +59,29 @@ int recieveMessage (char *pidInfo) { //Pid tulee onnistuneesti
     int fifoFD;
     char data[MAX_DATA];
 
+    /*int a = 0;
+    while (a < strlen((char *)pidInfo)) {
+        pid[a] = ((char *)pidInfo)[a];
+        a++;
+    }
+    printf("pid: %s\n", pid);*/
+    //pthread_t thread;
     while(1) {
         fifoFD = open(fifopath, O_RDONLY);
         read(fifoFD, data, sizeof(data));
-        printf("data: %s, datalen: %ld\n", data, strlen(data));
-        writeToFile(pidInfo, data);
+        //printf("data: %s, datalen: %ld\n", data, strlen(data));
+        /*struct fileWritingParams writingParams;
+        writingParams.pidInfo = pidInfo;
+        writingParams.data = data;
+        pthread_create(&thread, NULL, writeToFile, &writingParams);*/
+        writeToFile((char *)pidInfo, data);
+        //writeToFile(pid, data);
         break;
     }
 
     free(fifopath);
     unlink(fifopath);
-    return 0;
+    pthread_exit(pidInfo);
 }
 
 int main () {
@@ -57,12 +91,15 @@ int main () {
     mkfifo(fifofile, 0666);
     int pipefd;
 
+    pthread_t tid;
     while (1) {
         pipefd = open(fifofile, O_RDONLY);
         read(pipefd, pidInfo, 7);
         printf("pidINfo: %s\n", pidInfo);
-        recieveMessage(pidInfo);
-        sleep(1);
+        //recieveMessage(pidInfo);
+        pthread_create(&tid, NULL, recieveMessage, (void *)pidInfo);
+        //pthread_join(tid, NULL);
+        //sleep(1);
         //break;
     }
     return 0;
