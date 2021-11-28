@@ -12,10 +12,11 @@
 
 #include <errno.h>
 #include <sys/types.h>
+#include <time.h>
 
 #include "logging.c"
 
-#define MAX_DATA 512
+#define MAX_DATA 327680
 
 int transferData (char *pidInfo, char *data, long int datasize){
 
@@ -38,9 +39,11 @@ int transferData (char *pidInfo, char *data, long int datasize){
 
     int transferFD;
     while(1) {
-        sleep(5);
+        //sleep(5);
         transferFD = open(fifopath, O_WRONLY);
-        write(transferFD, &data1, strlen(data1)+1);
+        ssize_t written;
+        written = write(transferFD, &data1, strlen(data1)+1);
+        printf("written: %ld, currentTime: %ld\n", written, time(NULL));
         break;
     }
     free(fifopath);
@@ -82,6 +85,7 @@ int main (int argc, char *argv[]) {
 
     char data[MAX_DATA];
     read(fd, &data, MAX_DATA);
+    data[strlen(data)] = '\0';
     printf("datalength: %ld, data: %s\n", strlen(data), data);
 
     char *fifofile = "/tmp/metadatafifo";

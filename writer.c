@@ -1,6 +1,7 @@
 /*
 *   TODO:
-*   - threading
+*   - thread controlling
+*   - mutex
 *   - logging
 *   - cleaning the code
 */
@@ -12,39 +13,40 @@
 #include <pthread.h>
 #include <sys/stat.h>
 
-#define MAX_DATA 512
+#include <time.h>
+#define MAX_DATA 327680
 
 struct fileWritingParams {
     char* pidInfo;
     char* data;
 };
 
-int writeToFile (char *pidInfo, char *data) {
-//void *writeToFile (void *params) {
+//int writeToFile (char *pidInfo, char *data) {
+void *writeToFile (void *params) {
 
-    //struct fileWritingParams *givenParams = params; 
-    //char *pidInfo = givenParams->pidInfo;
-    //char *data = givenParams->data;
+    struct fileWritingParams *givenParams = params; 
+    char *pidInfo = givenParams->pidInfo;
+    char *data = givenParams->data;
 
-    printf("pidInfo: %s, data: %s\n", pidInfo, data);
-
-    /*if (access(pidInfo, F_OK) != -1) {
-        printf("fak.\n");
-    } else {
-        printf("non-fak.\n");
-    }*/
-
-    int fd = open(pidInfo, O_CREAT | O_WRONLY);
-    printf("fd: %d\n", fd);
+    //int fd = open(pidInfo, O_CREAT | O_WRONLY);
+    char currentTime[10];
+    sprintf(currentTime, "%ld", time(NULL));
+    printf("currentTime: %s\n", currentTime);
+    int fd = open(currentTime, O_CREAT | O_WRONLY);
     if (fd < 0 || fd == 65) {
+        printf("file causing error was: %s\n", pidInfo);
         perror("There was an error creating the file");
         //pthread_cancel(params);
-        //pthread_exit(params);
+        pthread_exit(params);
     }
+    printf("strlen(data): %ld\n", strlen(data));
     write(fd, data, strlen(data));
     close(fd);
-    return 0;
-    //pthread_exit(params);
+    /*FILE *fs = fopen(pidInfo, "w");
+    fwrite(data, 1, sizeof(data), fs);
+    fclose(fs);*/
+    //return 0;
+    pthread_exit(NULL);
 }
 
 //int recieveMessage (char *pidInfo) { //Pid tulee onnistuneesti
@@ -65,23 +67,33 @@ void *recieveMessage (void *pidInfo) {
         a++;
     }
     printf("pid: %s\n", pid);*/
-    //pthread_t thread;
+    pthread_t thread;
     while(1) {
         fifoFD = open(fifopath, O_RDONLY);
         read(fifoFD, data, sizeof(data));
-        //printf("data: %s, datalen: %ld\n", data, strlen(data));
-        /*struct fileWritingParams writingParams;
-        writingParams.pidInfo = pidInfo;
+        printf("pidInfo: %s\n", (char *)pidInfo);
+        struct fileWritingParams writingParams;
+        writingParams.pidInfo = (char *)pidInfo;
         writingParams.data = data;
-        pthread_create(&thread, NULL, writeToFile, &writingParams);*/
-        writeToFile((char *)pidInfo, data);
+        //printf("data: %s\n", data);
+        if (strlen(data) > 1000) {
+            printf("Sleeping a bit, heavy load incoming...\n");
+            sleep(5);
+        }
+        pthread_create(&thread, NULL, writeToFile, &writingParams);
+        pthread_join(thread, NULL);
+        /*int fd = open((char *)pidInfo, O_CREAT | O_WRONLY);
+        write(fd, data, strlen(data));
+        close(fd);*/
+
+        //writeToFile((char *)pidInfo, data);
         //writeToFile(pid, data);
         break;
     }
 
     free(fifopath);
     unlink(fifopath);
-    pthread_exit(pidInfo);
+    pthread_exit(NULL);
 }
 
 int main () {
@@ -89,18 +101,21 @@ int main () {
     char pidInfo[7];
     char *fifofile = "/tmp/metadatafifo";
     mkfifo(fifofile, 0666);
-    int pipefd;
+    int pipefd, a=1;
 
-    pthread_t tid;
+    pthread_t tid[100000];
     while (1) {
+        
         pipefd = open(fifofile, O_RDONLY);
         read(pipefd, pidInfo, 7);
-        printf("pidINfo: %s\n", pidInfo);
         //recieveMessage(pidInfo);
-        pthread_create(&tid, NULL, recieveMessage, (void *)pidInfo);
+        pthread_create(&tid[a], NULL, recieveMessage, (void *)pidInfo);
+        a++;
+        //tid = tid[a];
         //pthread_join(tid, NULL);
         //sleep(1);
         //break;
     }
+    pthread_exit(NULL);
     return 0;
 }
