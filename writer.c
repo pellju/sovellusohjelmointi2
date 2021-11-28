@@ -1,127 +1,92 @@
-/*
-*   TODO:
-*   - thread controlling
-*   - mutex
-*   - cleaning the code
-*/
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <fcntl.h> //O_RDONLY
+#include <fcntl.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/stat.h>
-
 #include <time.h>
-#define MAX_DATA 327680
 
-struct fileWritingParams {
+#define MAX_DATA 327680 //Defining the maximum data that can be throughputted
+
+
+struct fileWritingParams { //Custom structure for sending information to function responsbile for filewriting
     char* pidInfo;
     char* data;
 };
 
-pthread_mutex_t mtx;
+pthread_mutex_t mtx; //Initializing a mutex
 
-//int writeToFile (char *pidInfo, char *data) {
-void *writeToFile (void *params) {
+void *writeToFile (void *params) { //Function responsible for writing the data to file
 
-    struct fileWritingParams *givenParams = params; 
+    struct fileWritingParams *givenParams = params; //Extracting the data from the given structure
     char *pidInfo = givenParams->pidInfo;
     char *data = givenParams->data;
 
-    //int fd = open(pidInfo, O_CREAT | O_WRONLY);
-    char currentTime[10];
-    sprintf(currentTime, "%ld", time(NULL));
-    printf("currentTime: %s\n", currentTime);
-    int fd = open(currentTime, O_CREAT | O_WRONLY);
-    if (fd < 0 || fd == 65) {
-        printf("file causing error was: %s\n", pidInfo);
+    char fileName[18]; //Contains 10-letter timestamp, a '_'-char and pid of the process (max 7char)
+    sprintf(fileName, "%ld_%s", time(NULL), pidInfo); //Inserting current time to the variable initialized above
+
+    int fd = open(fileName, O_CREAT | O_WRONLY); //Creating a new file with the timestamp + pidInfo
+    if (fd < 0) { //Checking if creation was successfull
         perror("There was an error creating the file");
-        //pthread_cancel(params);
         pthread_exit(params);
     }
-    printf("strlen(data): %ld\n", strlen(data));
-    write(fd, data, strlen(data));
-    close(fd);
-    /*FILE *fs = fopen(pidInfo, "w");
-    fwrite(data, 1, sizeof(data), fs);
-    fclose(fs);*/
-    //return 0;
-    pthread_exit(NULL);
+    write(fd, data, strlen(data)); //Writing the data to the file
+    close(fd); //Closing the file
+    printf("File %s written.\n", fileName); //Printing the name of created file
+    pthread_exit(NULL); //Exiting the thread
 }
 
-//int recieveMessage (char *pidInfo) { //Pid tulee onnistuneesti
-void *recieveMessage (void *pidInfo) {
-    char path[12];
-    char pid[7];
-    sprintf(path, "/tmp/%s", (char *)pidInfo);
+void *recieveMessage (void *pidInfo) { //This function is responsible for reciving the data from the pid-file
+    char path[12]; //Initializing path of the pid file
+    sprintf(path, "/tmp/%s", (char *)pidInfo); //Setting the value of the pid file
     path[strlen(path)] = '\0';
-    char *fifopath = (char *)malloc(strlen(path)+1);
-    strcpy(fifopath, path);
-    mkfifo(fifopath, 0666);
-    int fifoFD;
-    char data[MAX_DATA];
+    mkfifo(path, 0666); //Creating the fifo-connection
+    int fifoFD; //Initializing the fifo file description
+    char data[MAX_DATA]; //Initializing the data-file
 
-    /*int a = 0;
-    while (a < strlen((char *)pidInfo)) {
-        pid[a] = ((char *)pidInfo)[a];
-        a++;
-    }
-    printf("pid: %s\n", pid);*/
     pthread_t thread;
-    while(1) {
-        fifoFD = open(fifopath, O_RDONLY);
-        read(fifoFD, data, sizeof(data));
-        printf("pidInfo: %s\n", (char *)pidInfo);
-        struct fileWritingParams writingParams;
-        writingParams.pidInfo = (char *)pidInfo;
-        writingParams.data = data;
-        //printf("data: %s\n", data);
-        if (strlen(data) > 1000) {
+    while(1) { //For some reason requires a while-loop and break, not sure why
+        fifoFD = open(path, O_RDONLY); //Opening the fifo file
+        read(fifoFD, data, sizeof(data)); //Reading the fifo file to the buffer (data)
+        
+        struct fileWritingParams writingParams; //Creating a new structure for *writeToFile
+        writingParams.pidInfo = (char *)pidInfo; //Setting the pid info
+        writingParams.data = data; //Setting the data
+
+        if (strlen(data) > 1000) { //Checking if the sent transmission is "large" (due to see that threading works if there are other smaller transmissions)
             printf("Sleeping a bit, heavy load incoming...\n");
             sleep(5);
         }
 
-        pthread_mutex_lock(&mtx);
-        pthread_create(&thread, NULL, writeToFile, &writingParams);
-        pthread_join(thread, NULL);
-        pthread_mutex_unlock(&mtx);
-        /*int fd = open((char *)pidInfo, O_CREAT | O_WRONLY);
-        write(fd, data, strlen(data));
-        close(fd);*/
-
-        //writeToFile((char *)pidInfo, data);
-        //writeToFile(pid, data);
+        pthread_mutex_lock(&mtx); //Initializing mutex lock for writing the file
+        pthread_create(&thread, NULL, writeToFile, &writingParams); //Creating new thread for file writing
+        pthread_join(thread, NULL); //Waiting that the thread is finished
+        pthread_mutex_unlock(&mtx); 
         break;
     }
 
-    free(fifopath);
-    unlink(fifopath);
-    pthread_exit(NULL);
+    unlink(path); //Unlinking the fifo file
+    pthread_exit(NULL); //Exiting from the thread
 }
 
-int main () {
+int main () { //Main function, reads the metadata fifo and recieves the pidInfo which will be used for sending
 
-    char pidInfo[7];
-    char *fifofile = "/tmp/metadatafifo";
-    mkfifo(fifofile, 0666);
-    int pipefd, a=1;
+    char pidInfo[7]; //Initializing the pid, max number is 7
+    char *fifofile = "/tmp/metadatafifo"; //Setting the location of metadata fifo
+    mkfifo(fifofile, 0666); //Marking the fifo
+    int pipefd; //Initializing the fd used for reading the fifo client sends
 
-    pthread_t tid[100000];
-    pthread_mutex_init(&mtx, NULL);
+    pthread_t tid; //Initializing a new thread
+    pthread_mutex_init(&mtx, NULL); //Activating the mutex
 
-    while (1) {
+    while (1) { //Again, for some reason I could not get this working without the while-loop
         
-        pipefd = open(fifofile, O_RDONLY);
-        read(pipefd, pidInfo, 7);
-        //recieveMessage(pidInfo);
-        pthread_create(&tid[a], NULL, recieveMessage, (void *)pidInfo);
-        a++;
-        //tid = tid[a];
-        //pthread_join(tid, NULL);
-        //sleep(1);
-        //break;
+        pipefd = open(fifofile, O_RDONLY); //Opening the metadata file
+        read(pipefd, pidInfo, 7); //Receiving the 7 bytes of pid
+
+        pthread_create(&tid, NULL, recieveMessage, (void *)pidInfo); //Creating a new thread
     }
-    pthread_exit(NULL);
-    return 0;
+    
+    return 0; //never reached because the loop above is supposed to be stopped by ctrl+c
 }
