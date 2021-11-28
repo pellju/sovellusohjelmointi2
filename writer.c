@@ -2,7 +2,6 @@
 *   TODO:
 *   - thread controlling
 *   - mutex
-*   - logging
 *   - cleaning the code
 */
 #include <stdio.h>
@@ -20,6 +19,8 @@ struct fileWritingParams {
     char* pidInfo;
     char* data;
 };
+
+pthread_mutex_t mtx;
 
 //int writeToFile (char *pidInfo, char *data) {
 void *writeToFile (void *params) {
@@ -80,8 +81,11 @@ void *recieveMessage (void *pidInfo) {
             printf("Sleeping a bit, heavy load incoming...\n");
             sleep(5);
         }
+
+        pthread_mutex_lock(&mtx);
         pthread_create(&thread, NULL, writeToFile, &writingParams);
         pthread_join(thread, NULL);
+        pthread_mutex_unlock(&mtx);
         /*int fd = open((char *)pidInfo, O_CREAT | O_WRONLY);
         write(fd, data, strlen(data));
         close(fd);*/
@@ -104,6 +108,8 @@ int main () {
     int pipefd, a=1;
 
     pthread_t tid[100000];
+    pthread_mutex_init(&mtx, NULL);
+
     while (1) {
         
         pipefd = open(fifofile, O_RDONLY);
