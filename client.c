@@ -30,10 +30,10 @@ int transferData (char *pidInfo, char *data, long int datasize){ //Function used
 
     int transferFD; //Initializing the fifo used for transfering the data.
     while(1) { //While loop, for some reason does not work without... (runs only once, see break)
-        transferFD = open(path, O_WRONLY); //Opening the fifo, writing data thre
+        transferFD = open(path, O_CREAT | O_WRONLY); //Opening the fifo, writing data thread
         ssize_t written; 
         written = write(transferFD, &data1, strlen(data1)+1); //Writing data to the path.
-        printf("written: %ld (amount of data written in bytes)\n", written); //Printing amount of data written into fifo
+        printf("written: %ld (amount of data written into writer in bytes)\n", written); //Printing amount of data written into fifo
         break; //Breaking from this one-time loop
     }
     if (writeLog("Successfully sent data!\n", 0) < 0) { //Checking if logging the successfull file data transfer is ok
