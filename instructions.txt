@@ -1,0 +1,14 @@
+Data transferring program
+The program consists of two main modules: client and writer. The client reads a file given as a parameter. After reading the data, client sends the data to the writer. Writer creates a file containing data from the client. The writer writes a file which is named after the timestamp at the time writing the file and the pid got from client.
+There’s a self-made logging tool, which is used for logging entries from client and server and writes these to log.
+
+
+Instructions:
+
+Writer can (and must be opened) once only. This works by going to the directory, compiling the source code with the Makefile given (make) and then executing the binary:
+./writer
+
+A separate client must be opened for each file. After compiling the code, client can be executed by following command:
+./client <file>
+where <file> is the name of the file which is wanted to be transferred (for example, ./client test.log). 
+User can set many parameters when starting the client, but only the first one will be acknowledged by the client.
