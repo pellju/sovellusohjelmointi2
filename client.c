@@ -25,7 +25,7 @@ int transferData (char *pidInfo, char *data, long int datasize){ //Function used
         data1[a] = data[a];
         a++;
     }
-    mkfifo(path, 0666);
+    mkfifo(path, 0666); //Initializing a FIFO-connection
     printf("strlen: %ld, data which will be sent: %s\n", strlen(data1), data1); //Printing information from the data which will be sent
 
     int transferFD; //Initializing the fifo used for transfering the data.

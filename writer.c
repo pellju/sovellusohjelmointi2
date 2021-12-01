@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <sys/stat.h>
 
 #include "logging.c"
 
@@ -39,6 +40,7 @@ void *writeToFile (void *params) { //Function responsible for writing the data t
     }
     write(fd, data, strlen(data)); //Writing the data to the file
     close(fd); //Closing the file
+    chmod(fileName, 0644); //Apparently, the file created has 0000-permissions after creating.
     writeLog(fileSuccessfullyCreated, 1);
     pthread_mutex_unlock(&mtx); 
 
