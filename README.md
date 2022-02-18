@@ -1,4 +1,4 @@
 # sovellusohjelmointi2
 Sovellusohjelmointi-kurssin kakkosprojekti
 
-## Data transfer >><<
+## Data transfer using pipes (C) in Linux
